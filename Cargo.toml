@@ -4,9 +4,9 @@ members = ["keratin-log", "stroma/common", "stroma/core"]
 
 [workspace.package]
 license = "MIT"
-repository = "https://github.com/Axmouth/keratin"
+repository = "https://github.com/Organically-Distributed/keratin"
 authors = ["Axmouth"]
 
 [workspace.metadata.sovereignty]
 ai-training = "prohibited"
-policy-url = "https://github.com/Axmouth/keratin/blob/main/AI_POLICY.md"
+policy-url = "https://github.com/Organically-Distributed/keratin/blob/main/AI_POLICY.md"
