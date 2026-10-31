@@ -3361,7 +3361,10 @@ mod held_pipeline_test {
             "the waiting AfterFsync ack rides along"
         );
         assert_eq!(state.written.load(), 2);
-        assert!(state.sync.status(2, 0).background_sync_pending);
+        // The writer publishes the pending flag just after it sends the job.
+        wait_for("background sync marked pending", &|| {
+            state.sync.status(2, 0).background_sync_pending
+        });
 
         // More written records arrive while the first sync is held. Many
         // intervals pass, but no second sync starts and nothing turns durable
