@@ -55,10 +55,23 @@ impl FileExt for File {
 }
 
 pub(crate) fn number_of_links(file: &File) -> io::Result<u64> {
+    Ok(u64::from(file_information(file)?.nNumberOfLinks))
+}
+
+#[cfg(feature = "io-fault-injection")]
+pub(crate) fn identity(file: &File) -> io::Result<(u64, u64)> {
+    let info = file_information(file)?;
+    Ok((
+        u64::from(info.dwVolumeSerialNumber),
+        (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow),
+    ))
+}
+
+fn file_information(file: &File) -> io::Result<BY_HANDLE_FILE_INFORMATION> {
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
     // The output is initialized only on success; the input handle stays live.
     if unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } == 0 {
         return Err(io::Error::last_os_error());
     }
-    Ok(u64::from(info.nNumberOfLinks))
+    Ok(info)
 }

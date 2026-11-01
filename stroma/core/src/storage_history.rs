@@ -121,8 +121,7 @@ pub(super) fn persist(path: &Path, receipt: &Receipt) -> Result<()> {
         let _ = fs::remove_file(&temp);
         result?;
     }
-    fs::File::open(path)
-        .and_then(|f| f.sync_all())
+    crate::dir_sync::sync_existing_file(path)
         .map_err(io_err)?;
     recovery_seal::sync_directories(parent)
 }

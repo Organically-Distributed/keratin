@@ -369,8 +369,7 @@ impl Stroma {
                     }
                     // Retry a possibly published index after failed directory sync.
                     tokio::task::spawn_blocking(move || {
-                        fs::File::open(base_path(&root, attempt))
-                            .and_then(|f| f.sync_all())
+                        crate::dir_sync::sync_existing_file(base_path(&root, attempt))
                             .map_err(io_err)?;
                         persist(&root.join("retention"), &index, MAX_INDEX)?;
                         Ok::<_, StromaError>(())

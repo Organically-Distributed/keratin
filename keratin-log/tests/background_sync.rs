@@ -531,6 +531,10 @@ async fn after_flush_append_on_a_flagged_log_counts_as_unexpected() {
     assert_eq!(log.sync_status().unexpected_background_syncs, 2);
 
     // A sync that covers the record first leaves nothing to report.
+    // Disable the timer during admission so it cannot win before sync is sent.
+    log.update_writer_settings(|s| s.background_sync_interval = Duration::ZERO)
+        .await
+        .unwrap();
     log.append(message(3), Some(KDurability::AfterFlush))
         .await
         .unwrap();
@@ -539,7 +543,10 @@ async fn after_flush_append_on_a_flagged_log_counts_as_unexpected() {
     assert_eq!(log.sync_status().unexpected_background_syncs, 2);
 
     // Clearing the flag live stops the reports.
-    log.update_writer_settings(|s| s.expect_every_write_synced = false)
+    log.update_writer_settings(|s| {
+        s.expect_every_write_synced = false;
+        s.background_sync_interval = Duration::from_millis(10);
+    })
         .await
         .unwrap();
     assert!(!log.sync_status().every_write_sync_expected);
@@ -604,7 +611,7 @@ async fn follower_writes_never_count_as_unexpected() {
 #[cfg(feature = "io-fault-injection")]
 mod faults {
     use super::*;
-    use keratin_log::io_fault_injection::{Fault, arm, arm_gated};
+    use keratin_log::io_fault_injection::{Fault, arm_gated};
 
     fn active(root: &std::path::Path) -> std::path::PathBuf {
         root.join("segments/00000000000000000000.log")
@@ -654,12 +661,15 @@ mod faults {
             log.append(message(0), Some(KDurability::AfterFsync))
                 .await
                 .unwrap();
-            let armed = arm(&active(&dir.root), fault).unwrap();
+            // Both written receipts must complete before the injected failure
+            // latches; a fast background sync can otherwise beat the second append.
+            let armed = arm_gated(&active(&dir.root), fault).unwrap();
             for value in 1..3 {
                 log.append(message(value), Some(KDurability::AfterFlush))
                     .await
                     .unwrap();
             }
+            armed.release();
             wait_until("latched background sync", || {
                 log.sync_status().storage_failure.is_some()
             })

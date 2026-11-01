@@ -6,13 +6,14 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{self, Write},
-    os::unix::fs::MetadataExt,
     path::Path,
     sync::{
         Arc, Condvar, LazyLock, Mutex,
         atomic::{AtomicUsize, Ordering},
     },
 };
+#[cfg(unix)]
+use std::os::unix::fs::MetadataExt;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Fault {
@@ -34,8 +35,15 @@ struct Entry {
 static FAULTS: LazyLock<Mutex<HashMap<(u64, u64), Entry>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 fn key(file: &File) -> io::Result<(u64, u64)> {
-    let m = file.metadata()?;
-    Ok((m.dev(), m.ino()))
+    #[cfg(unix)]
+    {
+        let m = file.metadata()?;
+        Ok((m.dev(), m.ino()))
+    }
+    #[cfg(windows)]
+    {
+        crate::windows_file::identity(file)
+    }
 }
 struct Gate {
     released: Mutex<bool>,

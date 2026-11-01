@@ -249,8 +249,7 @@ impl Stroma {
         let history =
             self.require_retained_history(topic, part, group, false, request, receipt.history.id)?;
         // Complete a visible publication barrier left by an interrupted caller.
-        fs::File::open(&path)
-            .and_then(|file| file.sync_all())
+        crate::dir_sync::sync_existing_file(&path)
             .map_err(io_err)?;
         recovery_seal::sync_directories(path.parent().unwrap())?;
         Ok(Some(SealedReplicaFrontiers {
@@ -397,8 +396,7 @@ impl Stroma {
                     "sealed retained history changed; recovery evidence withheld".into(),
                 ));
             }
-            fs::File::open(&path)
-                .and_then(|f| f.sync_all())
+            crate::dir_sync::sync_existing_file(&path)
                 .map_err(io_err)?;
             recovery_seal::sync_directories(path.parent().unwrap())?;
             return Ok(history);

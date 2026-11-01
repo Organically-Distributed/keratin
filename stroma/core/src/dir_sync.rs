@@ -3,6 +3,29 @@
 use keratin_log::util::fsync_dir;
 use std::{fs, io, path::Path};
 
+/// Sync existing metadata without changing its contents. Windows requires a
+/// writable handle for FlushFileBuffers; Unix permits the existing read-only
+/// open. Opening never creates a missing publication record.
+pub(crate) fn sync_existing_file(path: impl AsRef<Path>) -> io::Result<()> {
+    keratin_log::util::open_for_sync(path)?.sync_all()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn existing_metadata_sync_preserves_bytes_and_does_not_create_files() {
+        let dir = keratin_log::test_dir!("metadata_sync");
+        let path = dir.root.join("published");
+        std::fs::write(&path, b"publication").unwrap();
+        super::sync_existing_file(&path).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"publication");
+        assert_eq!(
+            super::sync_existing_file(dir.root.join("missing")).unwrap_err().kind(),
+            std::io::ErrorKind::NotFound
+        );
+    }
+}
+
 // Files that mark the top of a storage tree: a Stroma root and a recovery
 // cache namespace. Directory chains are synced up to the first of these.
 fn is_tree_root(dir: &Path) -> bool {

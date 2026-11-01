@@ -9,6 +9,9 @@ fn identity(bytes: &[u8]) -> RecoverySnapshotIdentity {
     }
 }
 fn open(root: &Path, bytes: &[u8]) -> RecoverySnapshotFile {
+    // Standalone fixtures need the same owned namespace boundary as recovery
+    // phases. Syncing beyond that tree would require access to system ancestors.
+    let _namespace = crate::recovery_cache::RecoveryCacheLease::acquire(root).unwrap();
     RecoverySnapshotFile::open(root, identity(bytes), Default::default()).unwrap()
 }
 #[test]

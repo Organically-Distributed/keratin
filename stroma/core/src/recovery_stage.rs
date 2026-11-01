@@ -152,8 +152,7 @@ pub(super) fn persist_exact(path: &Path, content: &[u8]) -> Result<()> {
         if existing != content {
             return Err(invalid("conflicting recovery staging intent"));
         }
-        fs::File::open(path)
-            .and_then(|f| f.sync_all())
+        crate::dir_sync::sync_existing_file(path)
             .map_err(io_err)?;
         return recovery_seal::sync_directories(parent);
     }

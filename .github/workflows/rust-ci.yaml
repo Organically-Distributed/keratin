@@ -48,9 +48,15 @@ jobs:
           fi
 
   workspace-tests:
-    name: Workspace tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: Workspace tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      CARGO_BUILD_JOBS: ${{ matrix.os == 'windows-latest' && 2 || 4 }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -62,14 +68,21 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run tests
+        shell: bash
         run: |
-          ulimit -n 4096
-          cargo test --workspace --locked
+          if [ "$RUNNER_OS" != "Windows" ]; then ulimit -n 4096; fi
+          cargo test --workspace --locked --no-fail-fast
 
   fault-injection-tests:
-    name: Fault injection tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: Fault injection tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      CARGO_BUILD_JOBS: ${{ matrix.os == 'windows-latest' && 2 || 4 }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -83,8 +96,9 @@ jobs:
       # The feature compiles in test-only file operation faults, so it gets its
       # own build instead of joining the workspace run.
       - name: Run tests with injected I/O faults
+        shell: bash
         run: |
-          ulimit -n 4096
+          if [ "$RUNNER_OS" != "Windows" ]; then ulimit -n 4096; fi
           cargo test --locked -p keratin-log -p stroma-core --features io-fault-injection
 
   release-build:

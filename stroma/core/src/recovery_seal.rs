@@ -107,8 +107,7 @@ fn persist_intent(path: &Path, intent: &SealIntent, replace: bool) -> Result<()>
     fs::create_dir_all(parent).map_err(io_err)?;
     if let Some(existing) = read_intent(path)? {
         if &existing == intent {
-            fs::File::open(path)
-                .and_then(|file| file.sync_all())
+            crate::dir_sync::sync_existing_file(path)
                 .map_err(io_err)?;
             return sync_directories(parent);
         }

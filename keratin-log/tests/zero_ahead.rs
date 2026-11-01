@@ -64,9 +64,31 @@ async fn zeros_stay_ahead_of_data_and_survive_a_crash() {
     log.shutdown().await.unwrap();
 }
 
+#[cfg(unix)]
 fn allocated_bytes(path: &std::path::Path) -> u64 {
     use std::os::unix::fs::MetadataExt;
     std::fs::metadata(path).unwrap().blocks() * 512
+}
+
+#[cfg(windows)]
+fn allocated_bytes(path: &std::path::Path) -> u64 {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_STANDARD_INFO, FileStandardInfo, GetFileInformationByHandleEx,
+    };
+    let file = std::fs::File::open(path).unwrap();
+    let mut info: FILE_STANDARD_INFO = unsafe { std::mem::zeroed() };
+    // AllocationSize measures reserved storage rather than logical zero padding.
+    let success = unsafe {
+        GetFileInformationByHandleEx(
+            file.as_raw_handle(),
+            FileStandardInfo,
+            (&mut info as *mut FILE_STANDARD_INFO).cast(),
+            std::mem::size_of::<FILE_STANDARD_INFO>() as u32,
+        )
+    };
+    assert_ne!(success, 0, "{}", std::io::Error::last_os_error());
+    info.AllocationSize.try_into().unwrap()
 }
 
 /// A log with only a few small records reserves and zeroes nothing. Once it

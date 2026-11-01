@@ -399,8 +399,7 @@ impl Stroma {
                 // failed. Finish durability before permitting any new backfill.
                 let path = self.checkpoint_journal_path(topic, part, group);
                 tokio::task::spawn_blocking(move || {
-                    fs::File::open(&path)
-                        .and_then(|f| f.sync_all())
+                    crate::dir_sync::sync_existing_file(&path)
                         .map_err(io_err)?;
                     recovery_seal::sync_directories(path.parent().unwrap())
                 })
@@ -582,8 +581,7 @@ impl Stroma {
                     journal.group.as_deref(),
                 );
                 tokio::task::spawn_blocking(move || {
-                    fs::File::open(&path)
-                        .and_then(|f| f.sync_all())
+                    crate::dir_sync::sync_existing_file(&path)
                         .map_err(io_err)?;
                     recovery_seal::sync_directories(path.parent().unwrap())
                 })

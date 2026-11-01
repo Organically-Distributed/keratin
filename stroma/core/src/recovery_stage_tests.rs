@@ -251,9 +251,10 @@ async fn stage_adopts_runtime_policy_on_open_and_resume() {
         .await
         .unwrap();
     assert!(
-        runtime.logs().iter().any(
-            |log| log.root.to_string_lossy().contains("/staging/") && log.applied.revision == 1
-        )
+        runtime.logs().iter().any(|log| {
+            log.root.components().any(|part| part.as_os_str() == "staging")
+                && log.applied.revision == 1
+        })
     );
     stage.append(page(&spec, &records)).await.unwrap();
     let receipt = stage.finish().await.unwrap();
@@ -272,9 +273,10 @@ async fn stage_adopts_runtime_policy_on_open_and_resume() {
         .unwrap();
     assert_eq!(stage.finish().await.unwrap(), receipt);
     assert!(
-        runtime.logs().iter().any(
-            |log| log.root.to_string_lossy().contains("/staging/") && log.applied.revision == 2
-        )
+        runtime.logs().iter().any(|log| {
+            log.root.components().any(|part| part.as_os_str() == "staging")
+                && log.applied.revision == 2
+        })
     );
     drop(stage);
     st.shutdown().await.unwrap();
@@ -767,6 +769,7 @@ async fn local_reuse_source(st: &Stroma, divergent: bool) -> RecoverySealRequest
 
 #[tokio::test]
 async fn reuse_checks_actual_payloads_and_installs_private_writable_tail() {
+    #[cfg(unix)]
     use std::os::unix::fs::MetadataExt;
     for cold in [false, true] {
         for divergent in [false, true] {
@@ -795,6 +798,8 @@ async fn reuse_checks_actual_payloads_and_installs_private_writable_tail() {
                 stage.append(page(&spec, &records)).await.unwrap();
             } else {
                 assert_eq!(stage.next_offset().await, 3);
+                // Unix forks share immutable segments; Windows uses copies.
+                #[cfg(unix)]
                 assert_eq!(
                     fs::metadata(source.join(prefix)).unwrap().ino(),
                     fs::metadata(stage.inner.lock().await.root.join("log").join(prefix))
@@ -809,6 +814,7 @@ async fn reuse_checks_actual_payloads_and_installs_private_writable_tail() {
                 .await
                 .unwrap();
             let destination = st.tp_part_dir("q", 0, None);
+            #[cfg(unix)]
             assert_eq!(
                 fs::metadata(destination.join(prefix)).unwrap().ino(),
                 fs::metadata(stage.inner.lock().await.root.join("log").join(prefix))

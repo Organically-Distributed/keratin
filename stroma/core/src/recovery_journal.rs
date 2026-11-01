@@ -113,7 +113,7 @@ impl RecoveryInspectionJournal {
             Err(e) if e.kind() == io::ErrorKind::NotFound => journal.persist(&path, &encoded)?,
             Err(e) => return Err(e),
         }
-        File::open(&path)?.sync_all()?;
+        crate::dir_sync::sync_existing_file(&path)?;
         fsync_dir(&journal.root)?;
         Ok(journal)
     }
@@ -236,7 +236,7 @@ impl RecoveryInspectionJournal {
             if &existing != page {
                 return Err(invalid("conflicting inspection journal page"));
             }
-            File::open(path)?.sync_all()?;
+            crate::dir_sync::sync_existing_file(path)?;
             return fsync_dir(&self.root);
         }
         let payload = encode(&(request, page))?;

@@ -1871,7 +1871,7 @@ impl Log {
                 continue;
             }
             let target = seg_log_path(destination, base);
-            let file = File::open(source)?;
+            let file = crate::util::open_for_sync(source)?;
             crate::util::sync_file_all(&file)?;
             let length = file.metadata()?.len();
             #[cfg(unix)]
@@ -1884,12 +1884,12 @@ impl Log {
                 crate::shared_segment::boundary("linked");
             } else {
                 std::fs::copy(source, &target)?;
-                crate::util::sync_file_all(&File::open(&target)?)?;
+                crate::util::sync_file_all(&crate::util::open_for_sync(&target)?)?;
                 stats.copied_bytes += length;
             }
             let target_index = seg_idx_path(destination, base);
             stats.copied_bytes += std::fs::copy(seg_idx_path(&self.root, base), &target_index)?;
-            crate::util::sync_file_all(&File::open(target_index)?)?;
+            crate::util::sync_file_all(&crate::util::open_for_sync(target_index)?)?;
         }
         create_segment_pair(destination, next, crate::util::unix_millis())?;
         crate::shared_segment::boundary("target-tail");

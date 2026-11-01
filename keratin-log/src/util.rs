@@ -78,6 +78,20 @@ pub(crate) fn sync_file_all(file: &std::fs::File) -> io::Result<()> {
     file.sync_all()
 }
 
+/// Open existing contents for a subsequent sync without creating or truncating
+/// the file. Windows requires write access for FlushFileBuffers even when the
+/// caller writes no bytes; Unix retains a read-only open for sealed segments.
+pub fn open_for_sync(path: impl AsRef<Path>) -> io::Result<std::fs::File> {
+    #[cfg(windows)]
+    {
+        std::fs::OpenOptions::new().read(true).write(true).open(path)
+    }
+    #[cfg(not(windows))]
+    {
+        std::fs::File::open(path)
+    }
+}
+
 /// Make the entries of a directory durable, so a file created, renamed or
 /// removed inside it survives power loss.
 #[cfg(unix)]

@@ -228,7 +228,7 @@ pub fn retire_recovery_cache(root: &Path, max_files: usize) -> io::Result<Recove
         marker.sync_all()?;
         fsync_dir(root)?;
     }
-    File::open(root.join("retired"))?.sync_all()?;
+    crate::dir_sync::sync_existing_file(root.join("retired"))?;
     fsync_dir(root)?;
     fn tree(path: &Path, max: usize, result: &mut RecoveryCacheCleanup) -> io::Result<()> {
         for entry in fs::read_dir(path)? {
