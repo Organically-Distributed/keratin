@@ -57,6 +57,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     env:
       CARGO_BUILD_JOBS: ${{ matrix.os == 'windows-latest' && 2 || 4 }}
+      # Hosted Windows runners have limited space for test artifacts.
+      CARGO_PROFILE_DEV_DEBUG: ${{ matrix.os == 'windows-latest' && '0' || '2' }}
+      CARGO_PROFILE_TEST_DEBUG: ${{ matrix.os == 'windows-latest' && '0' || '2' }}
+      CARGO_INCREMENTAL: ${{ matrix.os == 'windows-latest' && '0' || '1' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -83,6 +87,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     env:
       CARGO_BUILD_JOBS: ${{ matrix.os == 'windows-latest' && 2 || 4 }}
+      # Hosted Windows runners have limited space for test artifacts.
+      CARGO_PROFILE_DEV_DEBUG: ${{ matrix.os == 'windows-latest' && '0' || '2' }}
+      CARGO_PROFILE_TEST_DEBUG: ${{ matrix.os == 'windows-latest' && '0' || '2' }}
+      CARGO_INCREMENTAL: ${{ matrix.os == 'windows-latest' && '0' || '1' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
