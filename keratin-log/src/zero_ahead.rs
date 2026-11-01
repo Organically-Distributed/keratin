@@ -17,7 +17,10 @@
 //! slower fsyncs at low rates and a higher p50.
 
 use std::fs::File;
+#[cfg(unix)]
 use std::os::unix::fs::FileExt;
+#[cfg(windows)]
+use crate::windows_file::FileExt;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};

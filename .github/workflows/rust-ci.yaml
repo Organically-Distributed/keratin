@@ -88,8 +88,13 @@ jobs:
           cargo test --locked -p keratin-log -p stroma-core --features io-fault-injection
 
   release-build:
-    name: Release build
-    runs-on: ubuntu-latest
+    name: Release build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -102,3 +107,10 @@ jobs:
 
       - name: Build workspace release
         run: cargo build --workspace --release --locked
+
+      - name: Check durable storage lifecycle
+        run: cargo test --release --locked -p keratin-log --test platform_smoke
+
+      - name: Check Windows positional I/O
+        if: runner.os == 'Windows'
+        run: cargo test --release --locked -p keratin-log --test windows_file_io

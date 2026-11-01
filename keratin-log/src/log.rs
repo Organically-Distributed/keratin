@@ -2517,13 +2517,21 @@ fn list_spares(root: &Path) -> io::Result<Vec<PathBuf>> {
 /// linked from a frozen fork is never reused, since writing over it would
 /// change the fork's copy too. The caller syncs the directory.
 fn keep_as_spare(root: &Path, base: u64, log_path: &Path) -> io::Result<bool> {
+    #[cfg(unix)]
     use std::os::unix::fs::MetadataExt;
     let metadata = match fs::metadata(log_path) {
         Ok(metadata) => metadata,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
         Err(e) => return Err(e),
     };
-    if metadata.nlink() > 1 || list_spares(root)?.len() >= MAX_SPARE_SEGMENTS {
+    #[cfg(unix)]
+    let links = metadata.nlink();
+    #[cfg(windows)]
+    let links = {
+        let _ = metadata;
+        crate::windows_file::number_of_links(&File::open(log_path)?)?
+    };
+    if links > 1 || list_spares(root)?.len() >= MAX_SPARE_SEGMENTS {
         return Ok(false);
     }
     fs::rename(log_path, spare_path(root, base))?;
@@ -2652,7 +2660,10 @@ fn sync_recovered_tail(root: &Path, active: &Segment, index: &Index) -> io::Resu
 /// segment's header. A damaged header still fails the open, since it could
 /// hide acknowledged records.
 fn drop_unstarted_segments(root: &Path, bases: &mut Vec<(u64, PathBuf)>) -> io::Result<()> {
+    #[cfg(unix)]
     use std::os::unix::fs::FileExt;
+    #[cfg(windows)]
+    use crate::windows_file::FileExt;
     let mut dropped = false;
     while let Some((base, _)) = bases.last() {
         let base = *base;

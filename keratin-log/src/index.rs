@@ -120,7 +120,10 @@ impl Index {
         log_end: u64,
         stride: u32,
     ) -> io::Result<()> {
+        #[cfg(unix)]
         use std::os::unix::fs::FileExt;
+        #[cfg(windows)]
+        use crate::windows_file::FileExt;
         let header = IDX_HEADER_LEN as u64;
         let len = self.file.metadata()?.len();
         if len < header {

@@ -23,6 +23,8 @@ pub mod reusable_buffer;
 mod segment;
 mod shared_segment;
 mod zero_ahead;
+#[cfg(windows)]
+mod windows_file;
 pub use shared_segment::FrozenForkStats;
 mod drain_diagnostics;
 mod latched_cut;
